@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # Cancel superseded runs on the same branch/PR.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLTK_VERSION: "1.4.5"
+
+jobs:
+  test:
+    name: Julia ${{ matrix.julia }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        julia: ["1.10", "1"]   # LTS and latest release
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake xvfb xauth \
+            libx11-dev libxext-dev libxft-dev libxinerama-dev libxcursor-dev \
+            libxrender-dev libxfixes-dev libfontconfig1-dev libfreetype-dev \
+            libpango1.0-dev libcairo2-dev \
+            libgl1-mesa-dev libglu1-mesa-dev \
+            libpng-dev libjpeg-dev zlib1g-dev
+
+      # FLTK 1.4 takes a few minutes to build, so cache the installed tree.
+      - name: Cache FLTK
+        id: cache-fltk
+        uses: actions/cache@v4
+        with:
+          path: ~/fltk
+          key: fltk-${{ env.FLTK_VERSION }}-${{ matrix.os }}-x11-v1
+
+      - name: Build FLTK ${{ env.FLTK_VERSION }}
+        if: steps.cache-fltk.outputs.cache-hit != 'true'
+        run: |
+          git -c advice.detachedHead=false clone --depth 1 --branch release-${FLTK_VERSION} https://github.com/fltk/fltk.git /tmp/fltk-src
+          cmake -S /tmp/fltk-src -B /tmp/fltk-build \
+            -D CMAKE_BUILD_TYPE=Release \
+            -D CMAKE_INSTALL_PREFIX=$HOME/fltk \
+            -D FLTK_BUILD_SHARED_LIBS=ON \
+            -D FLTK_BACKEND_WAYLAND=OFF \
+            -D FLTK_BUILD_GL=ON \
+            -D FLTK_BUILD_TEST=OFF \
+            -D FLTK_BUILD_EXAMPLES=OFF \
+            -D FLTK_BUILD_FLUID=OFF \
+            -D FLTK_BUILD_FLTK_OPTIONS=OFF
+          cmake --build /tmp/fltk-build --parallel
+          cmake --install /tmp/fltk-build
+
+      - name: Build the C shim
+        run: make -C deps FLTK_CONFIG=$HOME/fltk/bin/fltk-config
+
+      - name: Check generated constants are up to date
+        run: git diff --exit-code src/constants.jl
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia }}
+      - uses: julia-actions/cache@v2
+
+      - name: Run tests (virtual X display)
+        run: xvfb-run -a julia --color=yes --project=. test/runtests.jl
+
+      - name: Smoke-test the examples
+        run: |
+          cat > /tmp/smoke.jl <<'JL'
+          # Run an example for a moment, then close its windows.
+          using FLTK
+          add_timeout(1.0) do
+              foreach(hide!, FLTK.windows())
+          end
+          include(abspath(ARGS[1]))
+          JL
+          for ex in examples/*.jl; do
+            echo "::group::$ex"
+            xvfb-run -a julia --color=yes --project=. /tmp/smoke.jl "$ex"
+            echo "::endgroup::"
+          done

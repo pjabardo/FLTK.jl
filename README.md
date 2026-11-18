@@ -1,5 +1,7 @@
 # FLTK.jl
 
+[![CI](https://github.com/pjabardo/FLTK.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/pjabardo/FLTK.jl/actions/workflows/CI.yml)
+
 Julia bindings for [FLTK 1.4](https://www.fltk.org), the Fast Light Toolkit.
 
 ```julia
