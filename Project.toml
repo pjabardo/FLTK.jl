@@ -1,0 +1,7 @@
+name = "FLTK"
+uuid = "80baef76-47a8-40e3-bdaa-1b21683b78d0"
+authors = ["pjabardo"]
+version = "0.1.0"
+
+[compat]
+julia = "1.9"
