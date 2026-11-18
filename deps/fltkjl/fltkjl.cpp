@@ -73,6 +73,10 @@
 #include <FL/Fl_Terminal.H>
 #include <FL/Fl_Tree.H>
 #include <FL/Fl_Clock.H>
+#include <FL/Fl_Round_Clock.H>
+#include <FL/Fl_Scheme_Choice.H>
+#include <FL/fl_show_colormap.H>
+#include <FL/names.h>
 #include <FL/Fl_Image.H>
 #include <FL/Fl_Shared_Image.H>
 #include <FL/Fl_RGB_Image.H>
@@ -80,6 +84,7 @@
 #include <FL/Fl_Color_Chooser.H>
 #include <FL/Fl_File_Chooser.H>
 #include <FL/fl_ask.H>
+#include <FL/filename.H>
 #include <FL/fl_draw.H>
 
 #include <cstdint>
@@ -125,7 +130,7 @@ API void fljl_init() {
   sink += FL_ROUND_UP_BOX + FL_SHADOW_BOX + FL_ROUNDED_BOX + FL_RFLAT_BOX + FL_RSHADOW_BOX;
   sink += FL_DIAMOND_UP_BOX + FL_OVAL_BOX + FL_PLASTIC_UP_BOX + FL_GTK_UP_BOX;
   sink += FL_GLEAM_UP_BOX + FL_OXY_UP_BOX;
-  sink += FL_SHADOW_LABEL + FL_ENGRAVED_LABEL + FL_EMBOSSED_LABEL + FL_MULTI_LABEL;
+  sink += FL_SHADOW_LABEL + FL_ENGRAVED_LABEL + FL_EMBOSSED_LABEL + FL_MULTI_LABEL + FL_ICON_LABEL + FL_IMAGE_LABEL;
   (void)sink;
   fl_register_images();
 }
@@ -243,6 +248,8 @@ NEW(TextEditor, Fl_Text_Editor)
 NEW(Terminal, Fl_Terminal)
 NEW(Tree, Fl_Tree)
 NEW(Clock, Fl_Clock)
+NEW(RoundClock, Fl_Round_Clock)
+NEW(SchemeChoice, Fl_Scheme_Choice)
 
 // Windows placed by the window manager.
 API W *fljl_new_window_wh(int w, int h, const char *l, int dbl) {
@@ -265,6 +272,12 @@ API int fljl_h(W *w) { return w->h(); }
 API void fljl_resize(W *w, int x, int y, int ww, int hh) { w->resize(x, y, ww, hh); }
 API const char *fljl_label(W *w) { return w->label(); }
 API void fljl_set_label(W *w, const char *l) { w->copy_label(l); }
+API int fljl_horizontal_label_margin(W *w) { return w->horizontal_label_margin(); }
+API void fljl_set_horizontal_label_margin(W *w, int m) { w->horizontal_label_margin(m); }
+API int fljl_vertical_label_margin(W *w) { return w->vertical_label_margin(); }
+API void fljl_set_vertical_label_margin(W *w, int m) { w->vertical_label_margin(m); }
+API int fljl_label_image_spacing(W *w) { return w->label_image_spacing(); }
+API void fljl_set_label_image_spacing(W *w, int m) { w->label_image_spacing(m); }
 API int fljl_labelfont(W *w) { return w->labelfont(); }
 API void fljl_set_labelfont(W *w, int f) { w->labelfont(f); }
 API int fljl_labelsize(W *w) { return w->labelsize(); }
@@ -385,6 +398,8 @@ API void fljl_button_setonly(W *w) { BTN(w)->setonly(); }
 API int fljl_button_shortcut(W *w) { return BTN(w)->shortcut(); }
 API void fljl_button_set_shortcut(W *w, int s) { BTN(w)->shortcut(s); }
 API void fljl_button_set_down_box(W *w, int b) { BTN(w)->down_box((Fl_Boxtype)b); }
+API int fljl_button_compact(W *w) { return BTN(w)->compact(); }
+API void fljl_button_set_compact(W *w, int v) { BTN(w)->compact((uchar)v); }
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -409,6 +424,10 @@ API void fljl_input_set_textcolor(W *w, unsigned c) { INP(w)->textcolor(c); }
 API int fljl_input_readonly(W *w) { return INP(w)->readonly(); }
 API void fljl_input_set_readonly(W *w, int r) { INP(w)->readonly(r); }
 API void fljl_input_set_wrap(W *w, int r) { INP(w)->wrap(r); }
+API int fljl_input_shortcut(W *w) { return INP(w)->shortcut(); }
+API void fljl_input_set_shortcut(W *w, int s) { INP(w)->shortcut(s); }
+API int fljl_input_tab_nav(W *w) { return INP(w)->tab_nav(); }
+API void fljl_input_set_tab_nav(W *w, int v) { INP(w)->tab_nav(v); }
 
 // ---------------------------------------------------------------------------
 // Valuators (sliders, dials, counters, rollers, value input/output ...)
@@ -472,14 +491,21 @@ API int fljl_menu_insert(W *w, int idx, const char *label, int shortcut, intptr_
 API int fljl_menu_value(W *w) { return MNU(w)->value(); }
 API int fljl_menu_set_value(W *w, int i) { return MNU(w)->value(i); }
 API const char *fljl_menu_text(W *w) { return MNU(w)->text(); }
-API const char *fljl_menu_text_at(W *w, int i) { return MNU(w)->text(i); }
+// valid item index (FLTK does not check indices itself)
+static bool menu_ok(W *w, int i) { return MNU(w)->menu() && i >= 0 && i < MNU(w)->size() - 1; }
+API const char *fljl_menu_text_at(W *w, int i) { return menu_ok(w, i) ? MNU(w)->text(i) : nullptr; }
 API int fljl_menu_size(W *w) { return MNU(w)->size(); }
 API void fljl_menu_clear(W *w) { MNU(w)->clear(); }
-API void fljl_menu_remove(W *w, int i) { MNU(w)->remove(i); }
-API void fljl_menu_replace(W *w, int i, const char *t) { MNU(w)->replace(i, t); }
+API void fljl_menu_remove(W *w, int i) { if (menu_ok(w, i)) MNU(w)->remove(i); }
+API void fljl_menu_replace(W *w, int i, const char *t) { if (menu_ok(w, i)) MNU(w)->replace(i, t); }
 API int fljl_menu_find_index(W *w, const char *path) { return MNU(w)->find_index(path); }
-API int fljl_menu_mode(W *w, int i) { return MNU(w)->mode(i); }
-API void fljl_menu_set_mode(W *w, int i, int f) { MNU(w)->mode(i, f); }
+API int fljl_menu_mode(W *w, int i) { return menu_ok(w, i) ? MNU(w)->mode(i) : 0; }
+API void fljl_menu_set_mode(W *w, int i, int f) { if (menu_ok(w, i)) MNU(w)->mode(i, f); }
+API int fljl_menu_picked(W *w, int i) {
+  if (!menu_ok(w, i)) return 0;
+  MNU(w)->picked(&MNU(w)->menu()[i]);
+  return 1;
+}
 API int fljl_menu_item_value(W *w, int i) {
   const Fl_Menu_Item *m = MNU(w)->menu();
   return (m && i >= 0 && i < MNU(w)->size()) ? m[i].value() : 0;
@@ -560,6 +586,12 @@ API void fljl_wizard_set_value(W *w, W *c) { ((Fl_Wizard *)w)->value(c); }
 API void fljl_wizard_next(W *w) { ((Fl_Wizard *)w)->next(); }
 API void fljl_wizard_prev(W *w) { ((Fl_Wizard *)w)->prev(); }
 API void fljl_scroll_to(W *w, int x, int y) { ((Fl_Scroll *)w)->scroll_to(x, y); }
+API W *fljl_scroll_scrollbar(W *w) { return &((Fl_Scroll *)w)->scrollbar; }
+API W *fljl_scroll_hscrollbar(W *w) { return &((Fl_Scroll *)w)->hscrollbar; }
+API void fljl_tile_init_size_range(W *w, int minw, int minh) { ((Fl_Tile *)w)->init_size_range(minw, minh); }
+API void fljl_tile_size_range(W *w, W *c, int minw, int minh, int maxw, int maxh) {
+  ((Fl_Tile *)w)->size_range(c, minw, minh, maxw, maxh);
+}
 API int fljl_scroll_xposition(W *w) { return ((Fl_Scroll *)w)->xposition(); }
 API int fljl_scroll_yposition(W *w) { return ((Fl_Scroll *)w)->yposition(); }
 API void fljl_pack_spacing(W *w, int s) { ((Fl_Pack *)w)->spacing(s); }
@@ -733,6 +765,12 @@ API void fljl_copy(const char *t, int len, int dest) { Fl::copy(t, len, dest); }
 API int fljl_screen_count() { return Fl::screen_count(); }
 API void fljl_screen_xywh(int *x, int *y, int *w, int *h, int n) { Fl::screen_xywh(*x, *y, *w, *h, n); }
 API double fljl_screen_scale(int n) { return Fl::screen_scale(n); }
+API int fljl_window_screen_num(W *w) { return ((Fl_Window *)w)->screen_num(); }
+API const char *fljl_eventname(int e) { return (e >= 0 && e < (int)(sizeof(fl_eventnames) / sizeof(*fl_eventnames))) ? fl_eventnames[e] : "?"; }
+API int fljl_box_dx(int b) { return Fl::box_dx((Fl_Boxtype)b); }
+API int fljl_box_dy(int b) { return Fl::box_dy((Fl_Boxtype)b); }
+API int fljl_box_dw(int b) { return Fl::box_dw((Fl_Boxtype)b); }
+API int fljl_box_dh(int b) { return Fl::box_dh((Fl_Boxtype)b); }
 API void fljl_set_screen_scale(int n, double f) { Fl::screen_scale(n, (float)f); }
 API int fljl_screen_w() { return Fl::w(); }
 API int fljl_screen_h() { return Fl::h(); }
@@ -831,8 +869,10 @@ API const char *fljl_password_dialog(const char *l, const char *def) { return fl
 API void fljl_message_title(const char *t) { fl_message_title(t); }
 API void fljl_message_title_default(const char *t) { fl_message_title_default(t); }
 API void fljl_beep(int t) { fl_beep(t); }
+API int fljl_open_uri(const char *u) { return fl_open_uri(u); }
 API const char *fljl_file_chooser(const char *msg, const char *pat, const char *fname, int rel) { return fl_file_chooser(msg, pat, fname, rel); }
 API const char *fljl_dir_chooser(const char *msg, const char *fname, int rel) { return fl_dir_chooser(msg, fname, rel); }
+API unsigned fljl_show_colormap(unsigned c) { return fl_show_colormap((Fl_Color)c); }
 API int fljl_color_chooser(const char *name, unsigned char *r, unsigned char *g, unsigned char *b, int mode) {
   return fl_color_chooser(name, *r, *g, *b, mode);
 }

@@ -169,3 +169,46 @@ HAS_DISPLAY && @testset "layout" begin
     @test g1.w == 150
     destroy!(win); pump(3)
 end
+
+@testset "misc" begin
+    @test eventname(FL_PUSH) == "FL_PUSH"
+    @test box_dx(FL_UP_BOX) > 0 && box_dw(FL_NO_BOX) == 0
+    old = option(OPTION_ARROW_FOCUS)
+    option!(OPTION_ARROW_FOCUS, !old); @test option(OPTION_ARROW_FOCUS) == !old
+    option!(OPTION_ARROW_FOCUS, old)
+
+    local b, inp, sc, s
+    win = Window(300, 200, "misc") do win
+        b = Button(10, 10, 50, 25, "b"; compact = true, horizontal_label_margin = 3)
+        inp = MultilineInput(10, 40, 100, 40; shortcut = FL_F + 1)
+        sc = SchemeChoice(120, 10, 100, 25)
+        RoundClock(120, 40, 50, 50)
+        s = Scroll(180, 100, 100, 90)
+    end
+    @test iscompact(b) && b.horizontal_label_margin == 3
+    @test inp.shortcut == FL_F + 1
+    tab_nav!(inp, false); @test !tab_nav(inp)
+    @test sc isa AbstractMenu
+    @test scrollbar(s) isa FLTK.ForeignWidget && hscrollbar(s) isa FLTK.ForeignWidget
+    # handles compare by the widget they refer to
+    @test win[1] == b && findfirst(==(inp), win) == 2
+    @test parent(b) == win
+    destroy!(win); pump(3)
+end
+
+@testset "menu pick" begin
+    picked = String[]
+    local m
+    win = Window(200, 100, "menu") do win
+        m = MenuBar(0, 0, 200, 25)
+        add_item!(x -> push!(picked, "open"), m, "File/Open")
+        add_item!(m, "Edit/Toggle"; flags = FL_MENU_TOGGLE)
+    end
+    pick!(m, find_index(m, "File/Open"))
+    @test picked == ["open"]
+    t = find_index(m, "Edit/Toggle")
+    pick!(m, t); @test item_value(m, t)
+    @test_throws BoundsError pick!(m, 100)
+    @test mode(m, -1) == 0 && text(m, 100) === nothing
+    destroy!(win); pump(3)
+end

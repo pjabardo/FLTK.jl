@@ -32,6 +32,9 @@ fl_file_chooser(message::AbstractString = "Choose a file", pattern::AbstractStri
 fl_dir_chooser(message::AbstractString = "Choose a directory", fname::AbstractString = ""; relative::Bool = false) =
     _str_or_nothing(@ccall libfltkjl.fljl_dir_chooser(message::Cstring, fname::Cstring, relative::Cint)::Ptr{UInt8})
 
+"Show FLTK's 256-color palette and return the color picked (or `c` if cancelled)."
+fl_show_colormap(c::Integer) = @ccall libfltkjl.fljl_show_colormap(c::Cuint)::Cuint
+
 """
     fl_color_chooser(title = "Choose a color", (r, g, b) = (128, 128, 128)) -> (r, g, b) or nothing
 """
@@ -129,3 +132,6 @@ Base.copy(i::Image, w::Integer, h::Integer) = Image(@ccall libfltkjl.fljl_image_
 Base.copy(i::Image) = copy(i, size(i)...)
 Base.show(io::IO, i::Image) = getfield(i, :_ptr) == C_NULL ? print(io, "Image(<freed>)") :
     print(io, "Image(", join(size(i), "×"), ", ", channels(i), " channels)")
+
+"Open a URI (`http://...`, `file://...`, `mailto:...`) with the system's default application."
+fl_open_uri(uri::AbstractString) = (@ccall libfltkjl.fljl_open_uri(uri::Cstring)::Cint) != 0

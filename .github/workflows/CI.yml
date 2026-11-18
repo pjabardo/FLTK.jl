@@ -81,15 +81,22 @@ jobs:
       - name: Smoke-test the examples
         run: |
           cat > /tmp/smoke.jl <<'JL'
-          # Run an example for a moment, then close its windows.
+          # Run an example for a moment, then close its windows. The timeout
+          # repeats so that dialogs opened one after another are closed too.
           using FLTK
-          add_timeout(1.0) do
+          add_timeout(1.0; repeat = true) do
               foreach(hide!, FLTK.windows())
           end
           include(abspath(ARGS[1]))
           JL
-          for ex in examples/*.jl; do
+          set -o pipefail
+          for ex in examples/*.jl examples/fltk/*/*.jl; do
             echo "::group::$ex"
-            xvfb-run -a julia --color=yes --project=. /tmp/smoke.jl "$ex"
+            xvfb-run -a julia --color=yes --project=. /tmp/smoke.jl "$ex" 2>&1 | tee /tmp/smoke.log
             echo "::endgroup::"
+            # errors in callbacks and timeouts are logged, not thrown
+            if grep -q "Error in FLTK" /tmp/smoke.log; then
+              echo "::error file=$ex::an FLTK callback raised an error"
+              exit 1
+            fi
           done

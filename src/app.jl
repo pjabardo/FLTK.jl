@@ -120,6 +120,10 @@ end
 @doc "Key of the last key event (`Int('a')`, `FL_Enter`, ...)." event_key
 @doc "Mouse button of the last click (`FL_LEFT_MOUSE`, ...)." event_button
 @doc "Modifier and button state bits (`FL_SHIFT`, `FL_CTRL`, `FL_BUTTON1`, ...)." event_state
+"Name of an event number, e.g. `\"FL_PUSH\"`."
+eventname(ev::Integer) = _str(@ccall libfltkjl.fljl_eventname(ev::Cint)::Ptr{UInt8})
+"Mouse buttons held down: bits 1 = left, 2 = middle, 4 = right."
+event_buttons() = (event_state() >> 24) & 0x7f
 "Text of the last key event or paste."
 event_text() = _str(@ccall libfltkjl.fljl_event_text()::Ptr{UInt8})
 event_is_click() = (@ccall libfltkjl.fljl_event_is_click()::Cint) != 0
@@ -196,6 +200,15 @@ set_font!(i::Integer, name::AbstractString) = @ccall libfltkjl.fljl_set_font(i::
 set_fonts() = Int(@ccall libfltkjl.fljl_set_fonts(C_NULL::Ptr{UInt8})::Cint)
 font_name(i::Integer) = _str(@ccall libfltkjl.fljl_get_font_name(i::Cint)::Ptr{UInt8})
 
+"Get a global `Fl::option` (`OPTION_*`)."
+option(o::Integer) = (@ccall libfltkjl.fljl_get_option(o::Cint)::Cint) != 0
+"Set a global `Fl::option` (`OPTION_*`)."
+option!(o::Integer, on::Bool) = @ccall libfltkjl.fljl_option(o::Cint, on::Cint)::Cvoid
+"Border widths of a box type: left (`box_dx`), top (`box_dy`), total horizontal (`box_dw`) and vertical (`box_dh`)."
+box_dx(b::Integer) = Int(@ccall libfltkjl.fljl_box_dx(b::Cint)::Cint)
+box_dy(b::Integer) = Int(@ccall libfltkjl.fljl_box_dy(b::Cint)::Cint)
+box_dw(b::Integer) = Int(@ccall libfltkjl.fljl_box_dw(b::Cint)::Cint)
+box_dh(b::Integer) = Int(@ccall libfltkjl.fljl_box_dh(b::Cint)::Cint)
 scrollbar_size() = Int(@ccall libfltkjl.fljl_scrollbar_size()::Cint)
 scrollbar_size!(s::Integer) = @ccall libfltkjl.fljl_set_scrollbar_size(s::Cint)::Cvoid
 "Whether keyboard focus is drawn on widgets."

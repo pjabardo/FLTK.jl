@@ -137,10 +137,10 @@ callback is logged and does not crash the program.
 | buttons | `Button`, `LightButton`, `CheckButton`, `RoundButton`, `RadioButton`, `RadioRoundButton`, `RadioLightButton`, `ToggleButton`, `ReturnButton`, `RepeatButton` |
 | text input | `Input`, `IntInput`, `FloatInput`, `SecretInput`, `MultilineInput`, `Output`, `MultilineOutput` |
 | valuators | `Slider`, `HorSlider`, `NiceSlider`, `HorNiceSlider`, `FillSlider`, `ValueSlider`, `HorValueSlider`, `Scrollbar`, `Dial`, `Roller`, `Counter`, `Adjuster`, `ValueInput`, `ValueOutput`, `Spinner`, `Progress` |
-| menus | `MenuBar`, `MenuButton`, `Choice` (`add_item!` with per-item callbacks, shortcuts, toggle/radio items) |
+| menus | `MenuBar`, `MenuButton`, `Choice`, `SchemeChoice` (`add_item!` with per-item callbacks, shortcuts, toggle/radio items; `pick!` to choose an item from code) |
 | lists | `Browser`, `HoldBrowser`, `SelectBrowser`, `MultiBrowser`, `CheckBrowser`, `Tree` |
 | text | `TextBuffer`, `TextView` (`Fl_Text_Display`), `TextEditor`, `Terminal` |
-| other | `Box`, `Clock`, images (`load_image`, `RGBImage`), dialogs (`fl_message`, `fl_alert`, `fl_choice`, `fl_input`, `fl_password`, `fl_color_chooser`, `fl_file_chooser`, `native_file_chooser`), screens, colors, fonts, clipboard |
+| other | `Box`, `Clock`, `RoundClock`, images (`load_image`, `RGBImage`), dialogs (`fl_message`, `fl_alert`, `fl_choice`, `fl_input`, `fl_password`, `fl_color_chooser`, `fl_file_chooser`, `native_file_chooser`), screens, colors, fonts, clipboard |
 
 `TextView` is Julia's name for `Fl_Text_Display`, because `Base.TextDisplay`
 already exists.
@@ -155,10 +155,39 @@ julia --project=. examples/editor.jl         # text editor with file dialogs
 julia --project=. examples/calculator.jl     # Flex + Grid layout
 ```
 
+### FLTK's own examples, in Julia
+
+[`examples/fltk/`](examples/fltk) holds Julia translations of programs that
+ship with FLTK 1.4.5. They keep the original file names, so each one can be
+read side by side with its C++ source in FLTK's `examples/` or `test/`
+directory:
+
+* `examples/fltk/examples/`: `browser-simple`, `callbacks`, `draggable-group`,
+  `grid-simple`, `howto-draw-an-x`, `howto-flex-simple`, `howto-simple-svg`,
+  `howto-text-over-image-button`, `menubar-add`, `nativefilechooser-simple`,
+  `progress-simple`, `simple-terminal`, `tabs-simple`, `texteditor-simple`,
+  `tree-simple`, `wizard-simple`
+* `examples/fltk/test/`: `adjuster`, `arc`, `boxtype`, `button`, `buttons`,
+  `clock`, `color_chooser`, `cursor`, `curve`, `flex_demo`, `flex_login`,
+  `grid_buttons`, `grid_login`, `handle_events`, `hello`, `input`, `label`,
+  `message`, `output`, `pack`, `scroll`, `tile`
+
+```bash
+julia --project=. examples/fltk/test/boxtype.jl
+```
+
+Where C++ subclasses a widget to override `draw()` or `handle()`, the Julia
+version uses `draw!`/`handle!` on a plain widget; where it binds extra data to
+a callback, Julia uses a closure. The few parts that are left out are noted at
+the top of each file. Each file keeps the original copyright notice: FLTK and
+its examples are distributed under the
+[FLTK license](https://www.fltk.org/COPYING.php) (LGPL with exceptions).
+
 ## Not yet wrapped
 
 `Fl_Table` (needs a `draw_cell` override), offscreen drawing and image
-surfaces, printing, `Fl_Preferences`, drag and drop / paste
+surfaces, printing, images in menu items (`Fl_Multi_Label`), cursors made
+from images, `Fl_Preferences`, drag and drop / paste
 (`FL_PASTE` events arrive, but `Fl::paste` is not wrapped), text styling
 in `Fl_Text_Display`, and threading helpers (`Fl::lock`/`Fl::awake` are in
 the shim, but nothing on the Julia side uses them yet).

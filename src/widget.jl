@@ -53,6 +53,9 @@ end
 @getset AW color Cuint fljl_color fljl_set_color
 @getset AW selection_color Cuint fljl_selection_color fljl_set_selection_color
 @getset AW when Cint fljl_when fljl_set_when
+@getset AW horizontal_label_margin Cint fljl_horizontal_label_margin fljl_set_horizontal_label_margin
+@getset AW vertical_label_margin Cint fljl_vertical_label_margin fljl_set_vertical_label_margin
+@getset AW label_image_spacing Cint fljl_label_image_spacing fljl_set_label_image_spacing
 
 "The FLTK `type()` of a widget (e.g. `FL_HOR_SLIDER`). Also available as `w.type`."
 widgettype(w::AW) = Int(@ccall libfltkjl.fljl_type(_ptr(w)::Ptr{Cvoid})::Cint)
@@ -99,6 +102,9 @@ function destroy!(w::AW)
 end
 
 # ---- hierarchy ---------------------------------------------------------------
+"Two handles are equal when they refer to the same C++ widget."
+Base.:(==)(a::AW, b::AW) = getfield(a, :_ptr) == getfield(b, :_ptr)
+Base.hash(w::AW, h::UInt) = hash(getfield(w, :_ptr), h)
 Base.parent(w::AW) = _wrap(@ccall libfltkjl.fljl_parent(_ptr(w)::Ptr{Cvoid})::Ptr{Cvoid})
 window(w::AW) = _wrap(@ccall libfltkjl.fljl_window(_ptr(w)::Ptr{Cvoid})::Ptr{Cvoid})
 top_window(w::AW) = _wrap(@ccall libfltkjl.fljl_top_window(_ptr(w)::Ptr{Cvoid})::Ptr{Cvoid})
@@ -223,6 +229,7 @@ function Base.getindex(g::AbstractGroup, i::Integer)
 end
 Base.iterate(g::AbstractGroup, i = 1) = i > length(g) ? nothing : (g[i], i + 1)
 Base.eltype(::Type{<:AbstractGroup}) = AbstractWidget
+Base.keys(g::AbstractGroup) = 1:length(g)
 children(g::AbstractGroup) = collect(AbstractWidget, g)
 
 "Choose which child absorbs size changes when `g` is resized (`g` itself for all)."
@@ -250,6 +257,8 @@ ismodal(w::AWin) = (@ccall libfltkjl.fljl_modal(_ptr(w)::Ptr{Cvoid})::Cint) != 0
 border!(w::AWin, on::Bool) = (@ccall libfltkjl.fljl_border(_ptr(w)::Ptr{Cvoid}, on::Cint)::Cvoid; w)
 xclass!(w::AWin, s::AbstractString) = (@ccall libfltkjl.fljl_xclass(_ptr(w)::Ptr{Cvoid}, s::Cstring)::Cvoid; w)
 cursor!(w::AWin, c::Integer) = (@ccall libfltkjl.fljl_cursor(_ptr(w)::Ptr{Cvoid}, c::Cint)::Cvoid; w)
+"Index (0-based) of the screen the window is on."
+screen_num(w::AWin) = Int(@ccall libfltkjl.fljl_window_screen_num(_ptr(w)::Ptr{Cvoid})::Cint)
 isshown(w::AWin) = (@ccall libfltkjl.fljl_shown(_ptr(w)::Ptr{Cvoid})::Cint) != 0
 iconize!(w::AWin) = (@ccall libfltkjl.fljl_iconize(_ptr(w)::Ptr{Cvoid})::Cvoid; w)
 "Position the window so that `target` is under the mouse."

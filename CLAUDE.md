@@ -24,6 +24,9 @@ There is no CxxWrap and no BinaryBuilder/JLL yet.
 - `src/app.jl`: event loop, timeouts, events, screens, colors.
 - `src/draw.jl`: `fl_*` drawing functions (C++ names kept).
 - `src/dialogs.jl`: dialogs, native file chooser, `Image`.
+- `examples/*.jl`: FLTK.jl's own examples.
+- `examples/fltk/{examples,test}/`: Julia translations of the programs in
+  FLTK's `examples/` and `test/` folders (see "Translating FLTK examples").
 
 ## Commands
 
@@ -38,9 +41,29 @@ registered". That comes from the local Julia setup, not the package. Run
 `test/runtests.jl` directly instead.
 
 CI (`.github/workflows/CI.yml`) builds FLTK 1.4.5 with the X11 backend only,
-then runs the tests and smoke-tests every example under `xvfb-run`, on Julia
-1.10 and the latest release. It also fails if the regenerated
-`src/constants.jl` differs from the committed one.
+then on Julia 1.10 and the latest release:
+- fails if the regenerated `src/constants.jl` differs from the committed one;
+- runs `test/runtests.jl` under `xvfb-run`;
+- smoke-tests every `examples/*.jl` and `examples/fltk/*/*.jl`: a repeating
+  1 s timeout hides all windows (so a chain of dialogs also closes), and the
+  step fails if the output contains "Error in FLTK" (exceptions in callbacks
+  and timeouts are only logged, they don't change the exit code).
+
+## Checking examples locally
+
+The smoke test only shows the windows, so it misses errors inside callbacks.
+To check those, run the example with a helper script that, after ~1 s,
+walks `FLTK.windows()` recursively and:
+- calls each widget's `getfield(w, :_cb)` (skip windows and Quit/Exit buttons);
+- for menus, `pick!(m, i)` every item that isn't a submenu (skip Quit, Open...
+  and anything that opens a browser or file chooser);
+- with another repeating timeout, hides every window that is a
+  `ForeignWidget`: dialogs are created by FLTK, so they come back as
+  `ForeignWidget`, not `AbstractWindow`.
+
+Qualify names in such a helper (`FLTK.text`, `FLTK.label`): it runs in `Main`,
+where the example may define globals with the same names. `fl_show_colormap`
+only returns on a click or Escape, hiding its window doesn't end it.
 
 ## Design rules
 
@@ -61,6 +84,10 @@ then runs the tests and smoke-tests every example under `xvfb-run`, on Julia
 - **Strings are always copied** on the C++ side (`copy_label`,
   `copy_tooltip`, and `JlBase::strbuf`/`colw` for APIs that keep pointers,
   such as `Fl_Spinner::format` and `Fl_Browser::column_widths`).
+- **The shim checks indices.** FLTK itself doesn't: e.g. `Fl_Menu_::mode(-1)`
+  reads outside the menu. Guard wrappers that take an index (see
+  `menu_ok` in `fltkjl.cpp`) and return an empty value, or let the Julia
+  side throw `BoundsError`.
 - Lazily-registered box/label types (`FL_ROUND_UP_BOX`, `FL_GTK_*`, ...) are
   registered in `fljl_init()`. Add new ones there.
 - **Struct fields start with `_`.** Every other property name goes through
@@ -79,6 +106,13 @@ then runs the tests and smoke-tests every example under `xvfb-run`, on Julia
 - Indices follow FLTK. Browser lines are 1-based. Menu items and Grid
   rows/columns are 0-based. `Group` children are 1-based in Julia
   (`g[i]`, `insert!`).
+- Handles compare (`==`, `hash`) by the C++ widget they refer to, so a
+  `ForeignWidget` and a registered handle for the same widget are equal.
+  Groups support `keys`, so `findfirst(==(w), group)` works.
+- Widgets made by FLTK itself (`scrollbar(scroll)`, dialog windows, ...) are
+  `ForeignWidget`s: no callbacks or overrides, and not tracked.
+- Some FLTK constants are aliases, e.g. `FL_SYMBOL_LABEL == FL_NORMAL_LABEL`;
+  don't tell them apart by value.
 - Avoid clashes with names exported by Base: extend Base instead
   (`Base.parent`, `Base.minimum!`, `Base.mark`, `Base.isvalid`, ...), or rename.
   `Fl_Text_Display` is `TextView` because of `Base.TextDisplay`. All
@@ -96,18 +130,58 @@ then runs the tests and smoke-tests every example under `xvfb-run`, on Julia
 3. Run `make -C deps`, add tests, and update the README's "What's wrapped"
    table.
 
+## Translating FLTK examples
+
+The C++ sources are in `../fltk-1.4.5/examples` and `../fltk-1.4.5/test`.
+Conventions for `examples/fltk/`:
+- Same file name as the C++ program, `.jl` instead of `.cxx`.
+- Header: `# Julia translation of FLTK's test/foo.cxx.`, then the original
+  copyright lines (`grep -i copyright foo.cxx`), then
+  `# FLTK is distributed under the LGPL with exceptions, see https://www.fltk.org/COPYING.php`.
+  Note anything left out right below the header.
+- A C++ subclass that overrides `draw()`/`handle()` becomes a plain widget
+  with `draw!`/`handle!`; per-instance state lives in the closure (see
+  `draggable-group.jl`). Callback user data becomes a closure.
+- Don't name globals after FLTK exports (`window`, `text`, ...): assigning
+  them in `Main` fails or shadows the function. Use `win`, `win1`, ...
+- Data files (e.g. the XPM in `test/pixmaps/`) are copied next to the
+  translation and loaded with `joinpath(@__DIR__, ...)`.
+- Interpolation pitfall: `"$name!"` reads the variable `name!`; write
+  `"$(name)!"`.
+- After adding one, update the list in the README's "FLTK's own examples, in
+  Julia" section.
+
+Done: 16 programs from `examples/` and 22 from `test/` (see the README).
+Not yet translated:
+- `test/resize-example1..5c` (use `test/resize-arrows.cxx`; only need what is
+  already wrapped);
+- big demos: `sudoku`, `blocks`, `checkers`, `mandelbrot` (simplify: no
+  overlay/printing), `fonts`, `grid_alignment`, `ask`;
+- programs that need something from "Not yet wrapped": all `table-*`,
+  `tree-of-tables`, `howto-menu-with-images`, `chart-simple`, `input_choice`,
+  `howto-drag-and-drop`, `clipboard`, `textdisplay-with-colors`, `offscreen`,
+  `threads`, `help_dialog`, `shapedwindow`, the OpenGL programs.
+
 ## Environment
 
 - FLTK 1.4.5 source is in `../fltk-1.4.5` and its build in `../build`
   (shared libs, X11 + Wayland). The desktop session is Wayland. To take
-  screenshots, run with `FLTK_BACKEND=x11` and use ImageMagick
-  `import -window "<title>" out.png`.
+  screenshots, run with `FLTK_BACKEND=x11` and, from an `add_timeout` in a
+  helper script, `import -window "<title>" out.png` (ImageMagick), then hide
+  the windows. Windows without a title can't be found by name: get the id
+  from `xwininfo -root -tree`, matching the size times `screen_scale(0)`
+  (the display runs at 125%). `import -window root` does not work here.
+- Put temporary scripts and screenshots in the session's scratchpad, not in
+  the repository.
 - Pushing to GitHub (pjabardo/FLTK.jl) has to be done by the user from their
   own terminal: Claude's sessions have no GitHub credentials and no `gh`.
 
 ## Not yet wrapped (candidate work)
 
-`Fl_Table`, offscreen drawing / image surfaces, printing, `Fl_Preferences`,
+`Fl_Table` (most useful next: it unlocks ~10 FLTK examples), offscreen
+drawing / image surfaces, printing, `Fl_Multi_Label` (images in menu items),
+cursors from images, `Fl_Chart`, `Fl_Input_Choice`, `Fl_Help_View`,
+`Fl::add_fd`, window shapes, `Fl_Preferences`,
 `Fl::paste`/drag and drop, text styling in `Fl_Text_Display`, Julia-side use
 of `Fl::lock`/`Fl::awake`. `fl_run()` gives other Julia tasks a turn only
 every ~10 ms; this could be improved.

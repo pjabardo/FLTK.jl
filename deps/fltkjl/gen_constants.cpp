@@ -17,6 +17,7 @@
 #include <FL/Fl_Text_Display.H>
 #include <FL/Fl_Native_File_Chooser.H>
 #include <FL/Fl_Tree.H>
+#include <FL/Fl_Menu_Button.H>
 #include <cstdio>
 
 #define C(T, X)      printf("const %s = %s(%lld)\n", #X, #T, (long long)(X))
@@ -75,17 +76,20 @@ int main() {
   C(Cint, FL_PLASTIC_ROUND_UP_BOX); C(Cint, FL_PLASTIC_ROUND_DOWN_BOX);
   C(Cint, FL_GTK_UP_BOX); C(Cint, FL_GTK_DOWN_BOX); C(Cint, FL_GTK_UP_FRAME); C(Cint, FL_GTK_DOWN_FRAME);
   C(Cint, FL_GTK_THIN_UP_BOX); C(Cint, FL_GTK_THIN_DOWN_BOX); C(Cint, FL_GTK_ROUND_UP_BOX);
+  C(Cint, FL_GTK_THIN_UP_FRAME); C(Cint, FL_GTK_THIN_DOWN_FRAME);
   C(Cint, FL_GTK_ROUND_DOWN_BOX);
   C(Cint, FL_GLEAM_UP_BOX); C(Cint, FL_GLEAM_DOWN_BOX); C(Cint, FL_GLEAM_UP_FRAME);
   C(Cint, FL_GLEAM_DOWN_FRAME); C(Cint, FL_GLEAM_THIN_UP_BOX); C(Cint, FL_GLEAM_THIN_DOWN_BOX);
   C(Cint, FL_GLEAM_ROUND_UP_BOX); C(Cint, FL_GLEAM_ROUND_DOWN_BOX);
   C(Cint, FL_OXY_UP_BOX); C(Cint, FL_OXY_DOWN_BOX); C(Cint, FL_OXY_UP_FRAME); C(Cint, FL_OXY_DOWN_FRAME);
-  C(Cint, FL_OXY_THIN_UP_BOX); C(Cint, FL_OXY_THIN_DOWN_BOX); C(Cint, FL_OXY_ROUND_UP_BOX);
+  C(Cint, FL_OXY_THIN_UP_BOX); C(Cint, FL_OXY_THIN_DOWN_BOX);
+  C(Cint, FL_OXY_THIN_UP_FRAME); C(Cint, FL_OXY_THIN_DOWN_FRAME); C(Cint, FL_OXY_ROUND_UP_BOX);
   C(Cint, FL_OXY_ROUND_DOWN_BOX); C(Cint, FL_OXY_BUTTON_UP_BOX); C(Cint, FL_OXY_BUTTON_DOWN_BOX);
 
   H("Label types");
   C(Cint, FL_NORMAL_LABEL); C(Cint, FL_NO_LABEL); C(Cint, FL_SHADOW_LABEL);
   C(Cint, FL_ENGRAVED_LABEL); C(Cint, FL_EMBOSSED_LABEL);
+  C(Cint, FL_SYMBOL_LABEL); C(Cint, FL_ICON_LABEL); C(Cint, FL_IMAGE_LABEL); C(Cint, FL_MULTI_LABEL);
 
   H("Alignment");
   C(Cuint, FL_ALIGN_CENTER); C(Cuint, FL_ALIGN_TOP); C(Cuint, FL_ALIGN_BOTTOM);
@@ -148,6 +152,21 @@ int main() {
   N(Cint, "SCROLL_HORIZONTAL", Fl_Scroll::HORIZONTAL); N(Cint, "SCROLL_VERTICAL", Fl_Scroll::VERTICAL);
   N(Cint, "SCROLL_BOTH", Fl_Scroll::BOTH); N(Cint, "SCROLL_ALWAYS_ON", Fl_Scroll::ALWAYS_ON);
   N(Cint, "SCROLL_BOTH_ALWAYS", Fl_Scroll::BOTH_ALWAYS);
+  N(Cint, "SCROLL_HORIZONTAL_ALWAYS", Fl_Scroll::HORIZONTAL_ALWAYS); N(Cint, "SCROLL_VERTICAL_ALWAYS", Fl_Scroll::VERTICAL_ALWAYS);
+
+  N(Cint, "POPUP1", Fl_Menu_Button::POPUP1); N(Cint, "POPUP2", Fl_Menu_Button::POPUP2);
+  N(Cint, "POPUP12", Fl_Menu_Button::POPUP12); N(Cint, "POPUP3", Fl_Menu_Button::POPUP3);
+  N(Cint, "POPUP13", Fl_Menu_Button::POPUP13); N(Cint, "POPUP23", Fl_Menu_Button::POPUP23);
+  N(Cint, "POPUP123", Fl_Menu_Button::POPUP123);
+
+  H("Fl::option() values");
+  N(Cint, "OPTION_ARROW_FOCUS", Fl::OPTION_ARROW_FOCUS);
+  N(Cint, "OPTION_VISIBLE_FOCUS", Fl::OPTION_VISIBLE_FOCUS);
+  N(Cint, "OPTION_DND_TEXT", Fl::OPTION_DND_TEXT);
+  N(Cint, "OPTION_SHOW_TOOLTIPS", Fl::OPTION_SHOW_TOOLTIPS);
+  N(Cint, "OPTION_FNFC_USES_GTK", Fl::OPTION_FNFC_USES_GTK);
+  N(Cint, "OPTION_SHOW_SCALING", Fl::OPTION_SHOW_SCALING);
+  N(Cint, "OPTION_SIMPLE_ZOOM_SHORTCUT", Fl::OPTION_SIMPLE_ZOOM_SHORTCUT);
 
   H("Menu item flags");
   C(Cint, FL_MENU_INACTIVE); C(Cint, FL_MENU_TOGGLE); C(Cint, FL_MENU_VALUE); C(Cint, FL_MENU_RADIO);

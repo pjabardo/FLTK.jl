@@ -33,8 +33,20 @@ prev!(t::Wizard) = (@ccall libfltkjl.fljl_wizard_prev(_ptr(t)::Ptr{Cvoid})::Cvoi
 
 # ---- Scroll ----------------------------------------------------------------
 scroll_to!(s::Scroll, x::Integer, y::Integer) = (@ccall libfltkjl.fljl_scroll_to(_ptr(s)::Ptr{Cvoid}, x::Cint, y::Cint)::Cvoid; s)
+"The vertical scrollbar of a `Scroll` (a `ForeignWidget`)."
+scrollbar(s::Scroll) = _wrap(@ccall libfltkjl.fljl_scroll_scrollbar(_ptr(s)::Ptr{Cvoid})::Ptr{Cvoid})
+"The horizontal scrollbar of a `Scroll` (a `ForeignWidget`)."
+hscrollbar(s::Scroll) = _wrap(@ccall libfltkjl.fljl_scroll_hscrollbar(_ptr(s)::Ptr{Cvoid})::Ptr{Cvoid})
 xposition(s::Scroll) = Int(@ccall libfltkjl.fljl_scroll_xposition(_ptr(s)::Ptr{Cvoid})::Cint)
 yposition(s::Scroll) = Int(@ccall libfltkjl.fljl_scroll_yposition(_ptr(s)::Ptr{Cvoid})::Cint)
+
+# ---- Tile ------------------------------------------------------------------
+"Minimum size of all children of `t` created from now on."
+init_size_range!(t::Tile, minw::Integer, minh::Integer) =
+    (@ccall libfltkjl.fljl_tile_init_size_range(_ptr(t)::Ptr{Cvoid}, minw::Cint, minh::Cint)::Cvoid; t)
+"Size limits of one child of `t` while dragging."
+size_range!(t::Tile, c::AbstractWidget, minw::Integer, minh::Integer, maxw::Integer = 0x7fffffff, maxh::Integer = 0x7fffffff) =
+    (@ccall libfltkjl.fljl_tile_size_range(_ptr(t)::Ptr{Cvoid}, _ptr(c)::Ptr{Cvoid}, minw::Cint, minh::Cint, maxw::Cint, maxh::Cint)::Cvoid; t)
 
 # ---- Pack ------------------------------------------------------------------
 spacing!(p::Pack, s::Integer) = (@ccall libfltkjl.fljl_pack_spacing(_ptr(p)::Ptr{Cvoid}, s::Cint)::Cvoid; p)
@@ -122,6 +134,7 @@ make_current(w::GlWindow) = (@ccall libfltkjl.fljl_gl_make_current(_ptr(w)::Ptr{
 # =============================================================================
 @widget Box AbstractWidget
 @widget Clock AbstractWidget
+@widget RoundClock AbstractWidget
 
 # =============================================================================
 # Buttons
@@ -144,6 +157,10 @@ value!(b::AbstractButton, v::Integer) = value!(b, v != 0)
 "Turn on this radio button and turn off the others in its group."
 setonly!(b::AbstractButton) = (@ccall libfltkjl.fljl_button_setonly(_ptr(b)::Ptr{Cvoid})::Cvoid; b)
 @getset AbstractButton shortcut Cint fljl_button_shortcut fljl_button_set_shortcut
+"Compact buttons have no extra frame space (as in a keypad)."
+compact!(b::AbstractButton, on::Bool) = (@ccall libfltkjl.fljl_button_set_compact(_ptr(b)::Ptr{Cvoid}, on::Cint)::Cvoid; b)
+iscompact(b::AbstractButton) = (@ccall libfltkjl.fljl_button_compact(_ptr(b)::Ptr{Cvoid})::Cint) != 0
+@prop AbstractButton compact set
 down_box!(b::AbstractButton, bx::Integer) = (@ccall libfltkjl.fljl_button_set_down_box(_ptr(b)::Ptr{Cvoid}, bx::Cint)::Cvoid; b)
 @prop AbstractButton down_box set
 
@@ -166,10 +183,15 @@ Base.length(i::AbstractInput) = Int(@ccall libfltkjl.fljl_input_size(_ptr(i)::Pt
 @getset AbstractInput textfont Cint fljl_input_textfont fljl_input_set_textfont
 @getset AbstractInput textsize Cint fljl_input_textsize fljl_input_set_textsize
 @getset AbstractInput textcolor Cuint fljl_input_textcolor fljl_input_set_textcolor
+@getset AbstractInput shortcut Cint fljl_input_shortcut fljl_input_set_shortcut
 readonly(i::AbstractInput) = (@ccall libfltkjl.fljl_input_readonly(_ptr(i)::Ptr{Cvoid})::Cint) != 0
 readonly!(i::AbstractInput, on::Bool) = (@ccall libfltkjl.fljl_input_set_readonly(_ptr(i)::Ptr{Cvoid}, on::Cint)::Cvoid; i)
 @prop AbstractInput readonly
 wrap!(i::AbstractInput, on::Bool) = (@ccall libfltkjl.fljl_input_set_wrap(_ptr(i)::Ptr{Cvoid}, on::Cint)::Cvoid; i)
+"Whether Tab moves the focus (true) or inserts a tab (false, multiline inputs)."
+tab_nav(i::AbstractInput) = (@ccall libfltkjl.fljl_input_tab_nav(_ptr(i)::Ptr{Cvoid})::Cint) != 0
+tab_nav!(i::AbstractInput, on::Bool) = (@ccall libfltkjl.fljl_input_set_tab_nav(_ptr(i)::Ptr{Cvoid}, on::Cint)::Cvoid; i)
+@prop AbstractInput tab_nav
 "Cursor position (0-based byte offset, as in FLTK)."
 insert_position(i::AbstractInput) = Int(@ccall libfltkjl.fljl_input_insert_position(_ptr(i)::Ptr{Cvoid})::Cint)
 Base.mark(i::AbstractInput) = Int(@ccall libfltkjl.fljl_input_mark(_ptr(i)::Ptr{Cvoid})::Cint)
@@ -269,6 +291,13 @@ setprop!(v::AV, ::Val{:range}, r::AbstractRange) = range!(v, r)
 @widget MenuBar AbstractMenu
 @widget MenuButton AbstractMenu
 @widget Choice AbstractMenu
+@widget SchemeChoice AbstractMenu
+"""
+    SchemeChoice(x, y, w, h, label = "")
+
+A `Choice` that lists FLTK's schemes and switches the scheme when one is picked.
+"""
+SchemeChoice
 
 const AM = AbstractMenu
 
@@ -333,6 +362,16 @@ item_value!(m::AM, i::Integer, v::Bool) = (@ccall libfltkjl.fljl_menu_item_set_v
 textsize!(m::AM, s::Integer) = (@ccall libfltkjl.fljl_menu_textsize(_ptr(m)::Ptr{Cvoid}, s::Cint)::Cvoid; m)
 textfont!(m::AM, f::Integer) = (@ccall libfltkjl.fljl_menu_textfont(_ptr(m)::Ptr{Cvoid}, f::Cint)::Cvoid; m)
 down_box!(m::AM, b::Integer) = (@ccall libfltkjl.fljl_menu_down_box(_ptr(m)::Ptr{Cvoid}, b::Cint)::Cvoid; m)
+"""
+    pick!(menu, i)
+
+Act as if the user chose item `i` (0-based): toggle/radio items change state,
+the item becomes the menu's value, and its callback runs.
+"""
+function pick!(m::AM, i::Integer)
+    (@ccall libfltkjl.fljl_menu_picked(_ptr(m)::Ptr{Cvoid}, i::Cint)::Cint) == 0 && throw(BoundsError(m, i))
+    return m
+end
 "Pop up the menu at the mouse; returns the chosen index or -1."
 popup(m::MenuButton) = Int(@ccall libfltkjl.fljl_menu_button_popup(_ptr(m)::Ptr{Cvoid})::Cint)
 
